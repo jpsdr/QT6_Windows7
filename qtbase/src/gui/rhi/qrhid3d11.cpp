@@ -10,7 +10,7 @@
 #include <QtCore/private/qsystemerror_p.h>
 #include "qrhid3dhelpers_p.h"
 
-#include <VersionHelpers.h>
+#include <versionhelpers.h>
 
 QT_BEGIN_NAMESPACE
 

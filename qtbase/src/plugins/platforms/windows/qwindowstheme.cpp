@@ -42,7 +42,7 @@
 
 #include <algorithm>
 
-#include <VersionHelpers.h>
+#include <versionhelpers.h>
 
 #if QT_CONFIG(cpp_winrt)
 #   include <QtCore/private/qt_winrtbase_p.h>
