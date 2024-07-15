@@ -45,7 +45,6 @@ struct QWindowsContextPrivate;
 class QPoint;
 class QKeyEvent;
 class QPointingDevice;
-
 struct QWindowsUser32DLL
 {
     inline void init();

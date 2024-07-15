@@ -59,8 +59,6 @@
 
 #include <algorithm>
 
-#include "../../plugins/platforms/windows/vxkex.h"
-
 QT_BEGIN_NAMESPACE
 
 #if defined(Q_OS_WIN)
@@ -261,53 +259,32 @@ void QWindowsStyle::polish(QPalette &pal)
     QCommonStyle::polish(pal);
 }
 
-typedef BOOL (WINAPI *GetSystemMetricsForDpiFunc)(int, UINT);
-typedef BOOL (WINAPI *SystemParametersInfoForDpiFunc)(UINT, UINT, PVOID, UINT, UINT);
-
 int QWindowsStylePrivate::pixelMetricFromSystemDp(QStyle::PixelMetric pm, const QStyleOption *, const QWidget *widget)
 {
 #if defined(Q_OS_WIN)
-    // The pixel metrics are in device indepentent pixels;
-    // hardcode DPI to 1x 96 DPI.
-    const int dpi = 96;
-
-    static GetSystemMetricsForDpiFunc myGetSystemMetricsForDpi = 
-        (GetSystemMetricsForDpiFunc)::GetProcAddress(::GetModuleHandle(L"User32"), "GetSystemMetricsForDpi");
-
-    static SystemParametersInfoForDpiFunc mySystemParametersInfoForDpi = 
-        (SystemParametersInfoForDpiFunc)::GetProcAddress(::GetModuleHandle(L"User32"), "SystemParametersInfoForDpi");
-
     switch (pm) {
     case QStyle::PM_DockWidgetFrameWidth:
-        return myGetSystemMetricsForDpi ? myGetSystemMetricsForDpi(SM_CXFRAME, dpi) : vxkex::GetSystemMetricsForDpi(SM_CXFRAME, dpi);
+        return GetSystemMetrics(SM_CXFRAME);
 
     case QStyle::PM_TitleBarHeight: {
-        const int resizeBorderThickness = myGetSystemMetricsForDpi ?
-            (myGetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + myGetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi)) :
-            (vxkex::GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + vxkex::GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi)) ;
+        const int resizeBorderThickness =
+            GetSystemMetrics(SM_CXSIZEFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
         if (widget && (widget->windowType() == Qt::Tool))
-            return myGetSystemMetricsForDpi ? 
-                (myGetSystemMetricsForDpi(SM_CYSMCAPTION, dpi) + resizeBorderThickness) :
-                (vxkex::GetSystemMetricsForDpi(SM_CYSMCAPTION, dpi) + resizeBorderThickness);
-        return myGetSystemMetricsForDpi ? 
-            (myGetSystemMetricsForDpi(SM_CYCAPTION, dpi) + resizeBorderThickness) :
-            (vxkex::GetSystemMetricsForDpi(SM_CYCAPTION, dpi) + resizeBorderThickness);
+            return GetSystemMetrics(SM_CYSMCAPTION) + resizeBorderThickness;
+        return GetSystemMetrics(SM_CYCAPTION) + resizeBorderThickness;
     }
 
     case QStyle::PM_ScrollBarExtent:
         {
             NONCLIENTMETRICS ncm;
-            ncm.cbSize = sizeof(NONCLIENTMETRICS);
-            BOOL bResult = mySystemParametersInfoForDpi 
-                ? mySystemParametersInfoForDpi(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0, dpi) 
-                : vxkex::SystemParametersInfoForDpi(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0, dpi);
-            if (bResult)
+            ncm.cbSize = FIELD_OFFSET(NONCLIENTMETRICS, lfMessageFont) + sizeof(LOGFONT);
+            if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0))
                 return qMax(ncm.iScrollHeight, ncm.iScrollWidth);
         }
         break;
 
     case  QStyle::PM_MdiSubWindowFrameWidth:
-        return myGetSystemMetricsForDpi ? myGetSystemMetricsForDpi(SM_CYFRAME, dpi) : vxkex::GetSystemMetricsForDpi(SM_CYFRAME, dpi);
+        return GetSystemMetrics(SM_CYFRAME);
 
     default:
         break;

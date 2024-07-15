@@ -17,8 +17,6 @@
 #include <QtCore/private/qdebug_p.h>
 #include <QtCore/private/qtools_p.h>
 
-#include "vxkex.h"
-
 #if defined(WM_APPCOMMAND)
 #  ifndef FAPPCOMMAND_MOUSE
 #    define FAPPCOMMAND_MOUSE 0x8000
@@ -734,18 +732,28 @@ static inline QString messageKeyText(const MSG &msg)
 
 [[nodiscard]] static inline int getTitleBarHeight(const HWND hwnd)
 {
-    const BOOL bNewAPI = (QWindowsContext::user32dll.getSystemMetricsForDpi != nullptr);
-    const UINT dpi = bNewAPI ? QWindowsContext::user32dll.getDpiForWindow(hwnd) : vxkex::GetDpiForWindow(hwnd);
-    const int captionHeight = bNewAPI ? QWindowsContext::user32dll.getSystemMetricsForDpi(SM_CYCAPTION, dpi) : vxkex::GetSystemMetricsForDpi(SM_CYCAPTION, dpi);
-    if (IsZoomed(hwnd))
-        return captionHeight;
-    // The frame height should also be taken into account if the window
-    // is not maximized.
-    const int frameHeight = bNewAPI ? 
-        (QWindowsContext::user32dll.getSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + QWindowsContext::user32dll.getSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi))
-        : (vxkex::GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + vxkex::GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi));
-
-    return captionHeight + frameHeight;
+    if (QWindowsContext::user32dll.getDpiForWindow && QWindowsContext::user32dll.getSystemMetricsForDpi)
+    {
+        const UINT dpi = QWindowsContext::user32dll.getDpiForWindow(hwnd);
+        const int captionHeight = QWindowsContext::user32dll.getSystemMetricsForDpi(SM_CYCAPTION, dpi);
+        if (IsZoomed(hwnd))
+            return captionHeight;
+        // The frame height should also be taken into account if the window
+        // is not maximized.
+        const int frameHeight = QWindowsContext::user32dll.getSystemMetricsForDpi(SM_CYSIZEFRAME, dpi)
+                                + QWindowsContext::user32dll.getSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+        return captionHeight + frameHeight;    
+    }
+    else
+    {
+        const int captionHeight = GetSystemMetrics(SM_CYCAPTION);
+        if (IsZoomed(hwnd))
+            return captionHeight;
+        // The frame height should also be taken into account if the window
+        // is not maximized.
+        const int frameHeight = GetSystemMetrics(SM_CYSIZEFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
+        return captionHeight + frameHeight;    
+    }
 }
 
 [[nodiscard]] static inline bool isSystemMenuOffsetNeeded(const Qt::WindowFlags flags)

@@ -33,8 +33,6 @@
 
 #include <shlobj.h>
 
-#include "vxkex.h"
-
 QT_BEGIN_NAMESPACE
 
 /*!
@@ -675,11 +673,7 @@ static HRESULT startDoDragDrop(LPDATAOBJECT pDataObj, LPDROPSOURCE pDropSource, 
                 const quint32 pointerId = GET_POINTERID_WPARAM(msg.wParam);
 
                 POINTER_INFO pointerInfo{};
-                BOOL bResultPointerInfo = QWindowsContext::user32dll.getPointerInfo ? 
-                    QWindowsContext::user32dll.getPointerInfo(pointerId, &pointerInfo) : 
-                        vxkex::GetPointerInfo(pointerId, &pointerInfo);
-
-                if (!bResultPointerInfo)
+                if (!QWindowsContext::user32dll.getPointerInfo || !QWindowsContext::user32dll.getPointerInfo(pointerId, &pointerInfo))
                     return E_FAIL;
 
                 if (pointerInfo.pointerFlags & POINTER_FLAG_PRIMARY) {
