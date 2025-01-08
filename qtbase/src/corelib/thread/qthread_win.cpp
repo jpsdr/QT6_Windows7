@@ -18,17 +18,7 @@
 #  define _MT
 #endif // _MT
 #include <process.h>
-
-extern "C" {
-// MinGW is missing the declaration of SetThreadDescription:
-WINBASEAPI
-HRESULT
-WINAPI
-SetThreadDescription(
-    _In_ HANDLE hThread,
-    _In_ PCWSTR lpThreadDescription
-    );
-}
+#include <processthreadsapi.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -315,11 +305,13 @@ unsigned int __stdcall QT_ENSURE_STACK_ALIGNED_FOR_SSE QThreadPrivate::start(voi
     data->ensureEventDispatcher();
     data->eventDispatcher.loadRelaxed()->startingUp();
 
+#if defined(Q_CC_MSVC)
     // sets the name of the current thread.
     QString threadName = std::exchange(thr->d_func()->objectName, {});
     if (Q_LIKELY(threadName.isEmpty()))
         threadName = QString::fromUtf8(thr->metaObject()->className());
     qt_set_thread_name(GetCurrentThread(), threadName);
+#endif
 
     emit thr->started(QThread::QPrivateSignal());
     QThread::setTerminationEnabled(true);
