@@ -119,7 +119,8 @@ static constexpr QColor getSysColor(winrt::Windows::UI::Color &&color)
         return {};
     const QColor accent = QColor::fromRgb(abgr.blue(), abgr.green(), abgr.red(), abgr.alpha());
     const QColor accentLight = accent.lighter(120);
-    const QColor accentDarkest = accent.darker(120 * 120 * 120);#endif
+    const QColor accentDarkest = accent.darker(120 * 120 * 120);
+#endif
     switch (level) {
     case AccentColorDarkest:
         return accentDarkest;
