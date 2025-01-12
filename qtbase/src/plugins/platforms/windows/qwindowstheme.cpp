@@ -119,7 +119,12 @@ static constexpr QColor getSysColor(winrt::Windows::UI::Color &&color)
         return {};
     const QColor accent = QColor::fromRgb(abgr.blue(), abgr.green(), abgr.red(), abgr.alpha());
     const QColor accentLight = accent.lighter(120);
+    const QColor accentLighter = accent.lighter(120 * 120);
+    const QColor accentLightest = accent.lighter(120 * 120 * 120);
+    const QColor accentDark = accent.darker(120);
+    const QColor accentDarker = accent.darker(120 * 120);
     const QColor accentDarkest = accent.darker(120 * 120 * 120);
+
 #endif
     switch (level) {
     case AccentColorDarkest:
@@ -296,6 +301,8 @@ void QWindowsTheme::populateLightSystemBasePalette(QPalette &result)
     }
 #endif
 
+    const QColor linkColor = accent;
+    const QColor accentDark = accent.darker(120);
     const QColor btnFace = background;
     const QColor btnHighlight = getSysColor(COLOR_BTNHIGHLIGHT);
 
