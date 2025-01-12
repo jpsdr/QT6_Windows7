@@ -99,33 +99,52 @@ static constexpr QColor getSysColor(winrt::Windows::UI::Color &&color)
 
 [[maybe_unused]] [[nodiscard]] static inline QColor qt_accentColor(AccentColorLevel level)
 {
-#if QT_CONFIG(cpp_winrt)
-    using namespace winrt::Windows::UI::ViewManagement;
-    const auto settings = UISettings();
-    const QColor accent = getSysColor(settings.GetColorValue(UIColorType::Accent));
-    const QColor accentLight = getSysColor(settings.GetColorValue(UIColorType::AccentLight1));
-    const QColor accentDarkest = getSysColor(settings.GetColorValue(UIColorType::AccentDark3));
-#else
-    const QWinRegistryKey registry(HKEY_CURRENT_USER, LR"(Software\Microsoft\Windows\DWM)");
-    if (!registry.isValid())
-        return {};
-    const QVariant value = registry.value(L"AccentColor");
-    if (!value.isValid())
-        return {};
-    // The retrieved value is in the #AABBGGRR format, we need to
-    // convert it to the #AARRGGBB format which Qt expects.
-    const QColor abgr = QColor::fromRgba(qvariant_cast<DWORD>(value));
-    if (!abgr.isValid())
-        return {};
-    const QColor accent = QColor::fromRgb(abgr.blue(), abgr.green(), abgr.red(), abgr.alpha());
-    const QColor accentLight = accent.lighter(120);
-    const QColor accentLighter = accent.lighter(120 * 120);
-    const QColor accentLightest = accent.lighter(120 * 120 * 120);
-    const QColor accentDark = accent.darker(120);
-    const QColor accentDarker = accent.darker(120 * 120);
-    const QColor accentDarkest = accent.darker(120 * 120 * 120);
+    QColor accent;
+    QColor accentLight;
+    QColor accentLighter;
+    QColor accentLightest;
+    QColor accentDark;
+    QColor accentDarker;
+    QColor accentDarkest;
 
+#if QT_CONFIG(cpp_winrt)
+    if (IsWindows10OrGreater())
+    {
+        using namespace winrt::Windows::UI::ViewManagement;
+        const auto settings = UISettings();
+        accent = getSysColor(settings.GetColorValue(UIColorType::Accent));
+        accentLight = getSysColor(settings.GetColorValue(UIColorType::AccentLight1));
+        accentLighter = getSysColor(settings.GetColorValue(UIColorType::AccentLight2));
+        accentLightest = getSysColor(settings.GetColorValue(UIColorType::AccentLight3));
+        accentDark = getSysColor(settings.GetColorValue(UIColorType::AccentDark1));
+        accentDarker = getSysColor(settings.GetColorValue(UIColorType::AccentDark2));
+        accentDarkest = getSysColor(settings.GetColorValue(UIColorType::AccentDark3));
+    }
 #endif
+	
+    if (!accent.isValid())
+    {
+        const QWinRegistryKey registry(HKEY_CURRENT_USER, LR"(Software\Microsoft\Windows\DWM)");
+        if (!registry.isValid())
+            return {};
+        const QVariant value = registry.value(L"AccentColor");
+        if (!value.isValid())
+            return {};
+        // The retrieved value is in the #AABBGGRR format, we need to
+        // convert it to the #AARRGGBB format which Qt expects.
+        const QColor abgr = QColor::fromRgba(qvariant_cast<DWORD>(value));
+        if (!abgr.isValid())
+            return {};
+        accent = QColor::fromRgb(abgr.blue(), abgr.green(), abgr.red(), abgr.alpha());
+        accentLight = accent.lighter(120);
+        accentLighter = accentLight.lighter(120);
+        accentLightest = accentLighter.lighter(120);
+        accentDarkest = accent.darker(120 * 120 * 120);
+        accentDark = accent.darker(120);
+        accentDarker = accentDark.darker(120);
+        accentDarkest = accentDarker.darker(120);
+    }
+
     switch (level) {
     case AccentColorDarkest:
         return accentDarkest;
@@ -284,25 +303,14 @@ static QColor placeHolderColor(QColor textColor)
 */
 void QWindowsTheme::populateLightSystemBasePalette(QPalette &result)
 {
-    QColor background = getSysColor(COLOR_BTNFACE);
-    QColor textColor = getSysColor(COLOR_WINDOWTEXT);
-    QColor accent = qt_accentColor(AccentColorNormal);
-    QColor accentDarkest = accent.darker(120 * 120 * 120);
+    const QColor background = getSysColor(COLOR_BTNFACE);
+    const QColor textColor = getSysColor(COLOR_WINDOWTEXT);
 
-#if QT_CONFIG(cpp_winrt)
-    if (IsWindows10OrGreater())
-    {
-        // respect the Windows 11 accent color
-        using namespace winrt::Windows::UI::ViewManagement;
-        const auto settings = UISettings();
+    const QColor accentDark = qt_accentColor(AccentColorDark);
+    const QColor accentDarker = qt_accentColor(AccentColorDarker);
+    const QColor accentDarkest = qt_accentColor(AccentColorDarkest);
 
-        accent = getSysColor(settings.GetColorValue(UIColorType::Accent));
-        accentDarkest = getSysColor(settings.GetColorValue(UIColorType::AccentDark3));
-    }
-#endif
-
-    const QColor linkColor = accent;
-    const QColor accentDark = accent.darker(120);
+    const QColor linkColor = accentDarker;
     const QColor btnFace = background;
     const QColor btnHighlight = getSysColor(COLOR_BTNHIGHLIGHT);
 
