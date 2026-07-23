@@ -248,11 +248,16 @@ static void setThreadNameUsingException(HANDLE threadId, LPCSTR threadName) {
     THREADNAME_INFO info;
     info.dwType = 0x1000;
     info.szName = threadName;
-    info.dwThreadID = threadId;
+    // The debugger expects a thread *id* here, with -1 meaning "the calling thread".
+    // GetCurrentThread() returns the pseudo-handle (HANDLE)-2, which matches no thread,
+    // so the name would be silently discarded.
+    info.dwThreadID = (threadId == GetCurrentThread()) ? HANDLE(-1) : threadId;
     info.dwFlags = 0;
 
     __try {
-        RaiseException(0x406D1388, 0, sizeof(info) / sizeof(DWORD),
+        // The exception arguments are ULONG_PTR-sized, so the count must be derived
+        // from sizeof(ULONG_PTR); using sizeof(DWORD) reads past the struct on 64-bit.
+        RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR),
                        reinterpret_cast<const ULONG_PTR*>(&info));
     }
     __except (EXCEPTION_CONTINUE_EXECUTION) {
@@ -263,11 +268,18 @@ static void setThreadNameUsingException(HANDLE threadId, LPCSTR threadName) {
 
 void qt_set_thread_name(HANDLE threadId, const QString &name)
 {
-    HMODULE hKernel32 = GetModuleHandleW(L"Kernel32.dll");
+    // SetThreadDescription() is implemented in kernelbase.dll; kernel32.dll only gained a
+    // forwarder for it in later Windows 10 releases, so try both before giving up.
+    static SetThreadDescriptionFunc pSetThreadDescription = []() -> SetThreadDescriptionFunc {
+        for (const wchar_t *dll : { L"Kernel32.dll", L"KernelBase.dll" }) {
+            if (HMODULE hDll = GetModuleHandleW(dll)) {
+                if (FARPROC proc = GetProcAddress(hDll, "SetThreadDescription"))
+                    return reinterpret_cast<SetThreadDescriptionFunc>(proc);
+            }
+        }
+        return nullptr;
+    }();
 
-    SetThreadDescriptionFunc pSetThreadDescription = 
-        reinterpret_cast<SetThreadDescriptionFunc>(GetProcAddress(hKernel32, "SetThreadDescription"));
-    
     if (pSetThreadDescription) {
         pSetThreadDescription(threadId, reinterpret_cast<const wchar_t *>(name.utf16()) );
     }
