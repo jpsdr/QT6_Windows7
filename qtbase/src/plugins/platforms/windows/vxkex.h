@@ -142,7 +142,11 @@ static HRESULT GetScaleFactorForMonitor(
     LogPixelsX = GetDeviceCaps(DeviceContext, LOGPIXELSX);
     ReleaseDC(NULL, DeviceContext);
 
-    *ScaleFactor = (DEVICE_SCALE_FACTOR) (9600 / LogPixelsX);
+    // DEVICE_SCALE_FACTOR is a percentage - SCALE_150_PERCENT is 150 - so the
+    // DPI has to be divided by the baseline, not the other way round. The
+    // reciprocal produced 66 for a 150% display, which is not even a value of
+    // the enumeration.
+    *ScaleFactor = (DEVICE_SCALE_FACTOR) (LogPixelsX * SCALE_100_PERCENT / USER_DEFAULT_SCREEN_DPI);
     return S_OK;
 }
 
@@ -178,17 +182,14 @@ static HRESULT GetDpiForMonitor(
     *DpiX = GetDeviceCaps(DeviceContext, LOGPIXELSX);
     *DpiY = GetDeviceCaps(DeviceContext, LOGPIXELSY);
 
-    if (DpiType == MDT_EFFECTIVE_DPI) {
-        DEVICE_SCALE_FACTOR ScaleFactor;
-
-        // We have to multiply the DPI values by the scaling factor.
-        vxkex::GetScaleFactorForMonitor(Monitor, &ScaleFactor);
-
-        *DpiX *= ScaleFactor;
-        *DpiY *= ScaleFactor;
-        *DpiX /= 100;
-        *DpiY /= 100;
-    }
+    // Nothing to fold in for MDT_EFFECTIVE_DPI: Windows 7 has one system-wide
+    // DPI setting and no per-monitor scaling, so what GetDeviceCaps reports to a
+    // DPI-aware process already is the effective DPI - 144 on a 150% display.
+    //
+    // Scaling it a second time is what pinned the result to 96 at every setting
+    // other than 100%, leaving Qt at devicePixelRatio 1: icons and widget
+    // metrics stayed unscaled, while text did not, since the system font comes
+    // from SPI_GETNONCLIENTMETRICS already expressed in real pixels.
 
     ReleaseDC(NULL, DeviceContext);
     return S_OK;
