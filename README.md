@@ -115,6 +115,18 @@ Many other Qt 6 modules need no patches at all: built against patched qtbase, th
 - [Qt 6.5.3](https://github.com/crystalidea/qt6windows7/releases/tag/6.5.3-win7)
 - [Qt 6.5.1](https://github.com/crystalidea/qt6windows7/releases/tag/6.5.1-win7)
 
+### Packaging the result
+
+`make_win7_archive.pl` builds the archive published with each release — the one you get from the link at the top of this page — out of a Qt installation compiled with this backport:
+
+```
+perl make_win7_archive.pl C:\qt6_x64
+```
+
+It collects the Qt libraries from `bin`, the plugins applications load by path (`platforms`, `styles`, `imageformats` and `multimedia`, each skipped when the module was not built), and Qt Designer, which is a quick way to tell whether a build really runs on Windows 7. Debug builds are left out; a plain name match would not do here, since `qdirect2d.dll` and a few others genuinely end in a 'd', so a library counts as a debug build only when its release twin sits next to it.
+
+The Visual C++ runtime is packed as well, taken from the newest redistributable installed alongside the compiler. That is not just convenience: a redistributable **older** than the toolset that compiled Qt is unsupported, and it fails by crashing rather than by refusing to load — a Windows 7 machine carrying 14.36 will start a Designer built with 14.44 and then fault inside `MSVCP140.dll`. Shipping the matching runtime keeps the archive self-contained. Set `$include_msvc_runtime` to 0 in the script to leave it out.
+
 ### License
 
 The repository shares Qt Community Edition terms which imply [Open-Source terms and conditions (GPL and LGPL)](https://www.qt.io/licensing/open-source-lgpl-obligations?hsLang=en).
