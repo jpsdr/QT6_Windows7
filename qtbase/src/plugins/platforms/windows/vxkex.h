@@ -86,7 +86,11 @@ static BOOL SystemParametersInfoForDpi(
     // scale, so convert away from the system DPI, not from 96. The fonts have to
     // be rescaled too (Qt reads lfMessageFont from here as its default font); the
     // previous port left them untouched, so at 150% the UI font stayed 1.5x too big.
-    UINT SystemDpi = vxkex::GetDpiForSystem();
+    //
+    // SystemDpi MUST be signed: lfHeight is negative, and dividing a negative LONG
+    // by an unsigned int reinterprets it as a huge positive value, so the font
+    // height blew up to millions of pixels and every glyph rendered as a box.
+    INT SystemDpi = vxkex::GetDpiForSystem();
 
     if (SystemDpi == 0)
         SystemDpi = USER_DEFAULT_SCREEN_DPI;
@@ -300,8 +304,10 @@ static BOOL AdjustWindowRectExForDpi(
 {
     // Windows 7 backport: rescale the rectangle from the system DPI to the
     // requested one, then let the plain AdjustWindowRectEx add the (system-DPI)
-    // frame. Same baseline reasoning as the metric helpers above.
-    UINT SystemDpi;
+    // frame. Same baseline reasoning as the metric helpers above. Everything here
+    // is kept signed - the rectangle edges go negative once the frame is added,
+    // and unsigned division would corrupt them the same way it did the font.
+    INT SystemDpi;
 
     if (!Rect) {
         SetLastError(ERROR_INVALID_PARAMETER);
@@ -313,10 +319,10 @@ static BOOL AdjustWindowRectExForDpi(
     if (SystemDpi == 0)
         SystemDpi = USER_DEFAULT_SCREEN_DPI;
 
-    Rect->left   = Rect->left   * Dpi / SystemDpi;
-    Rect->top    = Rect->top    * Dpi / SystemDpi;
-    Rect->right  = Rect->right  * Dpi / SystemDpi;
-    Rect->bottom = Rect->bottom * Dpi / SystemDpi;
+    Rect->left   = Rect->left   * (INT) Dpi / SystemDpi;
+    Rect->top    = Rect->top    * (INT) Dpi / SystemDpi;
+    Rect->right  = Rect->right  * (INT) Dpi / SystemDpi;
+    Rect->bottom = Rect->bottom * (INT) Dpi / SystemDpi;
 
     return AdjustWindowRectEx(
         Rect,
